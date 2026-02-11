@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>靈感配對</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #e5e7eb, #d1d5db);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      gap: 28px;
+      color: #374151;
+    }
+    .container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .box {
+      width: 200px;
+      height: 120px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+      font-weight: 600;
+      border-radius: 14px;
+      background: #f9fafb;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+      text-align: center;
+    }
+    .box.animate {
+      transform: scale(0.97);
+      opacity: 0.75;
+    }
+    .box.locked {
+      background: #e5e7eb;
+    }
+    .multiply {
+      font-size: 32px;
+      font-weight: 600;
+      color: #9ca3af;
+      user-select: none;
+    }
+    .reroll, .extras-button, .toggle-extras {
+      background: #6b7280;
+      color: #f9fafb;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 999px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+      margin: 8px 0;
+    }
+    .reroll:hover, .extras-button:hover, .toggle-extras:hover {
+      background: #4b5563;
+    }
+    .reroll:active, .extras-button:active, .toggle-extras:active {
+      transform: translateY(1px) scale(0.97);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2) inset;
+    }
+    .extras {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .card {
+      background: #e5e7eb;
+      border-radius: 12px;
+      padding: 10px;
+      width: 120px;
+      display: flex;
+      justify-content: center;
+      text-align: center;
+    }
+    .card-content {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+    .extra-item {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="box" id="boxA"></div>
+    <div class="multiply">×</div>
+    <div class="box" id="boxB"></div>
+  </div>
+
+  <button class="reroll" onclick="draw()">重抽 A+B</button>
+
+  <div class="extras">
+    <div class="card" id="card1">
+      <div class="card-content" id="extras1"></div>
+    </div>
+    <div class="card" id="card2">
+      <div class="card-content" id="extras2"></div>
+    </div>
+    <div class="card" id="card3">
+      <div class="card-content" id="extras3"></div>
+    </div>
+  </div>
+  <button class="extras-button" onclick="drawExtras()">重抽附加元素</button>
+  <button class="toggle-extras" onclick="toggleExtrasCount()">切換 1 / 3 個附加元素</button>
+
+  <script>
+    const ideas = ["水手服", "女僕", "西裝", "運動服", "睡衣", "戰鬥裝", "禮服", "魔法少女", "體操服", "死庫水", "比基尼", "旗袍", "內衣", "天使", "惡魔", "生化人", "賽博龐克", "白大褂", "學蘭", "學生制服", "軍裝", "郵差", "魔女", "魔法師", "魔法少女", "弓箭手", "拳師", "白大褂", "殭屍", "吸血鬼", "賽車服", "兔女郎", "浴袍", "浴巾", "和服", "小紅帽", "黃色雨衣", "毛衣", "緊身衣", "間諜", "太空人", "全罩安全帽", "棉被"];
+    const extrasPool = ["小精靈", "掃帚", "貓耳", "玩偶", "翅膀", "包子", "饅頭", "熊", "蝴蝶結", "蕾絲", "雨傘", "透明", "煙霧", "紙傘", "甜點", "蛋糕", "草莓", "天使", "惡魔", "紅茶", "麵包", "吐司", "荷包蛋", "大便", "竹子", "熊貓", "植物", "盆栽", "蜂蜜", "耳機", "遊戲手把", "電腦椅", "錢", "電腦", "兔耳", "露營", "草地", "和果子", "茶道", "麥克風", "酒", "遮陽帽", "溫泉", "蝴蝶", "羊", "太刀", "格紋", "大紅", "正藍", "湖水綠", "全黑", "純白"];
+
+    const boxA = document.getElementById("boxA");
+    const boxB = document.getElementById("boxB");
+
+    let lockA = false;
+    let lockB = false;
+    let extrasCount = 3; // 預設抽 3 個
+
+    boxA.onclick = () => {
+      lockA = !lockA;
+      boxA.classList.toggle("locked", lockA);
+    };
+
+    boxB.onclick = () => {
+      lockB = !lockB;
+      boxB.classList.toggle("locked", lockB);
+    };
+
+    function randomFrom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function drawOne(box, locked) {
+      if (locked) return;
+      box.classList.add("animate");
+      setTimeout(() => {
+        box.textContent = randomFrom(ideas);
+        box.classList.remove("animate");
+      }, 120);
+    }
+
+    function draw() {
+      drawOne(boxA, lockA);
+      drawOne(boxB, lockB);
+    }
+
+    function drawExtras() {
+      const used = [];
+      for (let i = 1; i <= extrasCount; i++) {
+        const container = document.getElementById(`extras${i}`);
+        container.innerHTML = '';
+        const choices = extrasPool.filter(e => !used.includes(e));
+        const extra = randomFrom(choices);
+        used.push(extra);
+        const div = document.createElement('div');
+        div.className = 'extra-item';
+        div.textContent = extra;
+        container.appendChild(div);
+      }
+      // 清空不需要的卡片
+      for (let i = extrasCount + 1; i <= 3; i++) {
+        document.getElementById(`extras${i}`).innerHTML = '';
+      }
+    }
+
+    function toggleExtrasCount() {
+      extrasCount = extrasCount === 3 ? 1 : 3;
+      drawExtras();
+    }
+
+    draw();
+    drawExtras();
+  </script>
+</body>
+</html>
